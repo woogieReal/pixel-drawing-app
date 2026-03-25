@@ -1,0 +1,6 @@
+[submodule "fe"]
+	path = fe
+	url = https://github.com/woogieReal/pixel-drawing-fe.git
+[submodule "api"]
+	path = api
+	url = https://github.com/woogieReal/pixel-drawing-api.git
