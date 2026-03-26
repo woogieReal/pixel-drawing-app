@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  postgres:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.postgres
+    container_name: pixel-drawing-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin_password}
+      POSTGRES_DB: ${DB_DATABASE:-pixel_drawing_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pixel-network
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: pixel-drawing-api
+    restart: always
+    ports:
+      - "3100:3000"
+    environment:
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${DB_USERNAME:-admin}
+      - DB_PASSWORD=${DB_PASSWORD:-admin_password}
+      - DB_DATABASE=${DB_DATABASE:-pixel_drawing_db}
+      - CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      - postgres
+    networks:
+      - pixel-network
+
+  fe:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3100
+    container_name: pixel-drawing-fe
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    networks:
+      - pixel-network
+
+networks:
+  pixel-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
