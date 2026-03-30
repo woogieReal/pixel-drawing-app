@@ -1,0 +1,24 @@
+name: API Refactor and Development Workflow
+description: API 가이드 확인, 개발, 테스트 및 문서 업데이트를 포함한 표준 API 개발 프로세스
+
+steps:
+  1. Analysis:
+     action: "`doc/API_가이드.md` 파일을 읽고 현재 구현된 API 스펙과 구조를 분석하라."
+     
+  2. Implementation:
+     action: "사용자의 요구사항에 맞춰 API 기능을 개발하거나 수정하라. Nest.js의 베스트 프랙티스를 준수할 것."
+
+  3. Verification:
+     action: |
+       `api/test` 디렉토리 하위에서 관련 테스트 코드를 생성하거나 수정하라.
+       이후 `npm run test:e2e` 명령어를 실행하여 작성한 API가 정상적으로 동작하는지 검증하라.
+       테스트가 실패할 경우, 코드를 수정하고 통과할 때까지 반복하라.
+
+  4. Documentation Update:
+     action: |
+       API 개발 및 테스트 검증이 완료되었는지 최종 확인하라.
+       모든 검증이 끝났다면 변경된 API 스펙(엔드포인트, 파라미터, 응답 구조 등)을 `doc/API_가이드.md` 파일에 최신화하여 반영하라.
+
+guidelines:
+  - "테스트 코드는 반드시 e2e 테스트 환경에서 실행되어야 함"
+  - "문서 업데이트는 반드시 코드 구현과 테스트가 모두 성공한 뒤에 수행할 것"
