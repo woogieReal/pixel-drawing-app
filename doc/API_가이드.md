@@ -11,13 +11,15 @@
    - [캔버스 생성 — POST /canvas](#21-캔버스-생성--post-canvas)
    - [캔버스 목록 조회 — GET /canvas](#22-캔버스-목록-조회--get-canvas)
    - [캔버스 단건 조회 — GET /canvas/:id](#23-캔버스-단건-조회--get-canvasid)
-   - [캔버스 확장 — PATCH /canvas/:id/resize](#24-캔버스-확장--patch-canvasidresize)
+   - [캔버스 삭제 — DELETE /canvas/:id](#24-캔버스-삭제--delete-canvasid)
+   - [캔버스 확장 — PATCH /canvas/:id/resize](#25-캔버스-확장--patch-canvasidresize)
 3. [WebSocket API](#3-websocket-api)
    - [연결](#31-연결)
    - [픽셀 그리기 — draw 이벤트](#32-픽셀-그리기--draw-이벤트)
    - [픽셀 수신 — pixelUpdated 이벤트](#33-픽셀-수신--pixelupdated-이벤트)
    - [에러 수신 — error 이벤트](#34-에러-수신--error-이벤트)
    - [캔버스 크기 변경 수신 — canvasResized 이벤트](#35-캔버스-크기-변경-수신--canvasresized-이벤트)
+   - [캔버스 삭제 수신 — canvasDeleted 이벤트](#36-캔버스-삭제-수신--canvasdeleted-이벤트)
 4. [픽셀 데이터 해석 방법](#4-픽셀-데이터-해석-방법)
    - [pixelData 해석](#41-pixeldata-해석)
    - [thumbnail 해석](#42-thumbnail-해석)
@@ -172,7 +174,30 @@ GET /canvas/1
 
 ---
 
-### 2.4 캔버스 확장 — `PATCH /canvas/:id/resize`
+### 2.4 캔버스 삭제 — `DELETE /canvas/:id`
+
+특정 캔버스를 영구 삭제합니다. 삭제와 동시에 해당 캔버스 룸에 접속 중인 모든 클라이언트에게 `canvasDeleted` WebSocket 이벤트가 브로드캐스트됩니다.
+
+**Request**
+
+```http
+DELETE /canvas/1
+```
+
+**Response `204 No Content`**
+
+응답 본문 없음.
+
+**Error**
+
+| 코드 | 발생 조건 |
+|------|----------|
+| `404` | 해당 ID의 캔버스가 존재하지 않음 |
+| `400` | ID가 정수가 아닌 경우 |
+
+---
+
+### 2.5 캔버스 확장 — `PATCH /canvas/:id/resize`
 
 특정 캔버스의 크기를 지정된 방향으로 확장합니다. 확장된 영역은 흰색(RGB: 255, 255, 255)으로 채워집니다.
 리사이즈 완료 시 `thumbnail`도 즉시 갱신됩니다.
@@ -333,6 +358,31 @@ socket.on('error', (message) => {
 
 ---
 
+### 3.6 캔버스 삭제 수신 — `canvasDeleted` 이벤트
+
+캔버스가 삭제되면 해당 룸에 접속 중인 **모든 클라이언트**에게 브로드캐스트됩니다.
+
+**Payload**
+
+```json
+{
+  "canvasId": 1
+}
+```
+
+**클라이언트 대응 가이드**
+
+이벤트를 수신하면 즉시 목록 페이지로 이동하거나 사용자에게 삭제 알림을 표시합니다.
+
+```javascript
+socket.on('canvasDeleted', ({ canvasId }) => {
+  alert(`캔버스 #${canvasId}가 삭제되었습니다.`);
+  window.location.href = '/canvas';
+});
+```
+
+---
+
 ## 4. 픽셀 데이터 해석 방법
 
 ### 4.1 pixelData 해석
@@ -436,17 +486,21 @@ function renderThumbnail(canvasEl, thumbnail, width, height) {
 1. GET /canvas              → 캔버스 목록 + thumbnail 수신
 2. 각 카드에 thumbnail 렌더링 (4.2장 참고)
 3. 카드 클릭으로 캔버스 선택
+4. (선택) DELETE /canvas/:id → 캔버스 삭제 → 목록 갱신
 
 [편집 페이지 진입]
-4. GET /canvas/:id          → pixelData 수신 → Canvas API로 초기 화면 렌더링
-5. io('/canvas', { query: { canvasId } }) → WebSocket 연결
+5. GET /canvas/:id          → pixelData 수신 → Canvas API로 초기 화면 렌더링
+6. io('/canvas', { query: { canvasId } }) → WebSocket 연결
 
 [실시간 드로잉]
-6. 사용자 마우스 클릭 → drawPixel(socket, x, y, r, g, b) → draw 이벤트 전송
-7. 다른 사용자의 픽셀 변경 → pixelUpdated 이벤트 수신 → Canvas API로 픽셀 업데이트
+7. 사용자 마우스 클릭 → drawPixel(socket, x, y, r, g, b) → draw 이벤트 전송
+8. 다른 사용자의 픽셀 변경 → pixelUpdated 이벤트 수신 → Canvas API로 픽셀 업데이트
+
+[캔버스 삭제]
+9. 다른 사용자가 캔버스를 삭제하면 → canvasDeleted 이벤트 수신 → 목록 페이지로 이동
 
 [편집 종료]
-8. 마지막 사용자가 페이지를 떠나면(WebSocket disconnect) 서버가 thumbnail을 즉시 갱신
+10. 마지막 사용자가 페이지를 떠나면(WebSocket disconnect) 서버가 thumbnail을 즉시 갱신
 ```
 
 ---
